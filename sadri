@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maktab Jurnali | Boshqaruv Tizimi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Alpine.js for reactive UI -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-[#F3F6FB] text-[#182235] antialiased" x-data="schoolApp()">
+
+    <!-- Login Modal / Screen -->
+    <template x-if="!isAuthenticated">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#17243A]">
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#6EE7D8_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <div class="relative bg-white w-full max-w-md p-8 rounded-2xl shadow-2xl border border-slate-100 mx-4">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 font-bold text-2xl">✦</div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Maktab Jurnali</h1>
+                        <p class="text-xs text-slate-500">Professional Boshqaruv Tizimi</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 tracking-wider mb-1">FOYDALANUVCHI NOMI</label>
+                        <input type="text" x-model="loginForm.username" class="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-600 text-sm font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 tracking-wider mb-1">PAROL</label>
+                        <input type="password" x-model="loginForm.password" @keydown.enter="handleLogin()" class="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-600 text-sm font-medium">
+                    </div>
+
+                    <button @click="handleLogin()" class="w-full py-3 bg-[#4169E1] hover:bg-[#3155C6] text-white font-bold rounded-lg transition shadow-lg shadow-indigo-100 text-sm mt-2">
+                        Tizimga kirish →
+                    </button>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-100 text-xs text-slate-400">
+                    <p>Dastlabki admin: <span class="font-semibold text-slate-600">admin / admin123</span></p>
+                    <p>O‘qituvchi: <span class="font-semibold text-slate-600">teacher / teacher123</span></p>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Main App Shell -->
+    <div x-show="isAuthenticated" class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-[#17243A] text-[#C4D0E0] flex flex-col justify-between hidden md:flex shrink-0">
+            <div>
+                <!-- Brand -->
+                <div class="flex items-center gap-3 px-6 py-6 border-b border-slate-800/60">
+                    <div class="text-[#6EE7D8] text-xl font-bold">✦</div>
+                    <span class="text-white font-bold text-lg tracking-wide">Maktab Jurnali</span>
+                </div>
+
+                <!-- Navigation Menu -->
+                <div class="px-4 py-6 space-y-1.5">
+                    <p class="px-3 text-[10px] font-bold tracking-wider text-slate-500 mb-3">ASOSIY MENYU</p>
+                    
+                    <template x-for="tab in availableTabs">
+                        <button @click="currentTab = tab.id"
+                                :class="currentTab === tab.id ? 'bg-[#263B5C] text-white font-semibold' : 'hover:bg-[#1f304d] hover:text-white'"
+                                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition text-left">
+                            <span class="w-5 text-center" x-html="tab.icon"></span>
+                            <span x-text="tab.name"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- User Info & Logout -->
+            <div class="p-4 border-t border-slate-800/60 bg-[#141f33]">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <p class="text-sm font-bold text-white" x-text="currentUser?.fullName"></p>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider" x-text="currentUser?.role"></p>
+                    </div>
+                </div>
+                <button @click="logout()" class="w-full py-2 bg-[#263B5C] hover:bg-[#344761] text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-from-bracket"></i> Chiqish
+                </button>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            
+            <!-- Top Navbar -->
+            <header class="h-18 bg-white border-b border-[#E1E7F0] px-8 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-bold text-[#182235]" x-text="currentTabName"></h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                        <select x-model="selectedClass" class="bg-transparent text-xs font-bold text-[#4169E1] focus:outline-none cursor-pointer">
+                            <template x-for="c in classOptions">
+                                <option :value="c" x-text="c"></option>
+                            </template>
+                        </select>
+                        <span class="text-slate-300">•</span>
+                        <select x-model="selectedGroup" class="bg-transparent text-xs font-bold text-[#4169E1] focus:outline-none cursor-pointer">
+                            <option value="1-guruh">1-guruh</option>
+                            <option value="2-guruh">2-guruh</option>
+                            <option value="3-guruh">3-guruh</option>
+                        </select>
+                    </div>
+                    <div class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg" x-text="currentDate"></div>
+                </div>
+            </header>
+
+            <!-- Main Scrollable View -->
+            <main class="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F3F6FB]">
+                
+                <!-- 1. BOSH SAHIFA -->
+                <div x-show="currentTab === 'dashboard'" class="space-y-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-[#182235]">Xush kelibsiz, <span x-text="currentUser?.fullName"></span>!</h3>
+                        <p class="text-sm text-slate-500 mt-1">Maktabdagi kundalik jarayonlarni bir joydan kuzatib boring.</p>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-5 rounded-2xl border border-[#E1E7F0] flex items-center gap-4 shadow-sm">
+                            <div class="w-1.5 h-12 bg-[#4169E1] rounded-full"></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-semibold uppercase">Jami o‘quvchilar</p>
+                                <h4 class="text-2xl font-bold text-[#182235] mt-1" x-text="students.length"></h4>
+                                <span class="text-xs text-[#4169E1] font-bold">Ro‘yxatdagi</span>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-[#E1E7F0] flex items-center gap-4 shadow-sm">
+                            <div class="w-1.5 h-12 bg-[#14B8A6] rounded-full"></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-semibold uppercase">Faol sinflar</p>
+                                <h4 class="text-2xl font-bold text-[#182235] mt-1" x-text="uniqueClassesCount"></h4>
+                                <span class="text-xs text-[#14B8A6] font-bold">Sinflar kesimida</span>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-[#E1E7F0] flex items-center gap-4 shadow-sm">
+                            <div class="w-1.5 h-12 bg-[#20A477] rounded-full"></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-semibold uppercase">Bugun kelganlar</p>
+                                <h4 class="text-2xl font-bold text-[#182235] mt-1" x-text="todayPresentCount"></h4>
+                                <span class="text-xs text-[#20A477] font-bold">Davomat bo‘yicha</span>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-[#E1E7F0] flex items-center gap-4 shadow-sm">
+                            <div class="w-1.5 h-12 bg-[#E99A2D] rounded-full"></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-semibold uppercase">Bugungi baholar</p>
+                                <h4 class="text-2xl font-bold text-[#182235] mt-1" x-text="todayGradesCount"></h4>
+                                <span class="text-xs text-[#E99A2D] font-bold">Kiritilgan</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Quick Actions -->
+                        <div class="bg-white p-6 rounded-2xl border border-[#E1E7F0] lg:col-span-2 shadow-sm">
+                            <h4 class="text-lg font-bold text-[#182235] mb-1">Tezkor amallar</h4>
+                            <p class="text-xs text-slate-400 mb-6">Kerakli bo‘limni tanlab, tezkor qayd kiriting.</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button @click="currentTab = 'students'" class="p-4 rounded-xl bg-[#4169E1] text-white text-left font-bold text-sm shadow-md hover:bg-[#3155C6] transition flex items-center justify-between">
+                                    <span>O‘quvchilar ro‘yxati</span>
+                                    <i class="fa-solid fa-arrow-right text-xs opacity-80"></i>
+                                </button>
+                                <button @click="currentTab = 'attendance'" class="p-4 rounded-xl bg-[#E9F1FF] text-[#4169E1] text-left font-bold text-sm hover:bg-[#d8e7ff] transition flex items-center justify-between">
+                                    <span>Davomat belgilash</span>
+                                    <i class="fa-solid fa-arrow-right text-xs opacity-80"></i>
+                                </button>
+                                <button @click="currentTab = 'lessons'" class="p-4 rounded-xl bg-[#E9F1FF] text-[#4169E1] text-left font-bold text-sm hover:bg-[#d8e7ff] transition flex items-center justify-between">
+                                    <span>Dars mavzulari</span>
+                                    <i class="fa-solid fa-arrow-right text-xs opacity-80"></i>
+                                </button>
+                                <button @click="currentTab = 'grades'" class="p-4 rounded-xl bg-[#4169E1] text-white text-left font-bold text-sm shadow-md hover:bg-[#3155C6] transition flex items-center justify-between">
+                                    <span>Baholar kiritish</span>
+                                    <i class="fa-solid fa-arrow-right text-xs opacity-80"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Recent Grades Widget -->
+                        <div class="bg-white p-6 rounded-2xl border border-[#E1E7F0] shadow-sm flex flex-col">
+                            <h4 class="text-lg font-bold text-[#182235] mb-4">So‘nggi baholar</h4>
+                            <div class="space-y-3 flex-1 overflow-y-auto max-h-[220px]">
+                                <template x-for="g in grades.slice(-5).reverse()">
+                                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                                        <div>
+                                            <p class="text-xs font-bold text-[#182235]" x-text="getStudentName(g.studentId)"></p>
+                                            <p class="text-[10px] text-slate-400" x-text="g.subject + ' · ' + g.day"></p>
+                                        </div>
+                                        <span class="px-2.5 py-1 bg-[#E8F8F2] text-[#20A477] font-bold text-xs rounded-lg" x-text="g.grade"></span>
+                                    </div>
+                                </template>
+                                <template x-if="grades.length === 0">
+                                    <p class="text-xs text-slate-400 py-4 text-center">Hozircha baholar kiritilmagan.</p>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. O'QUVCHILAR -->
+                <div x-show="currentTab === 'students'" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#182235]">O‘quvchilar</h3>
+                            <p class="text-sm text-slate-500">O‘quvchilar ro‘yxatini qo‘shing, qidiring va boshqaring.</p>
+                        </div>
+                        <button @click="openModal('student')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> O‘quvchi qo‘shish
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 flex gap-3">
+                            <div class="relative flex-1">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                                <input type="text" x-model="searchStudent" placeholder="Ism yoki sinfni qidirish..." class="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-4">ID</th>
+                                        <th class="p-4">F.I.SH.</th>
+                                        <th class="p-4">Sinf</th>
+                                        <th class="p-4">Guruh</th>
+                                        <th class="p-4">Telefon</th>
+                                        <th class="p-4 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="s in filteredStudents" :key="s.id">
+                                        <tr class="hover:bg-slate-50/80 transition">
+                                            <td class="p-4 font-bold text-slate-400 text-xs" x-text="s.id"></td>
+                                            <td class="p-4 font-bold text-[#182235]" x-text="s.fullName"></td>
+                                            <td class="p-4 text-slate-600" x-text="s.className"></td>
+                                            <td class="p-4 text-slate-600" x-text="s.groupName"></td>
+                                            <td class="p-4 text-slate-600" x-text="s.phone || '—'"></td>
+                                            <td class="p-4 text-right">
+                                                <button @click="deleteItem('students', s.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="filteredStudents.length === 0">
+                                        <tr><td colspan="6" class="p-8 text-center text-slate-400 text-sm">O‘quvchilar topilmadi.</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. DAVOMAT -->
+                <div x-show="currentTab === 'attendance'" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#182235]">Davomat</h3>
+                            <p class="text-sm text-slate-500">Har bir o‘quvchi uchun kunlik davomat holatini belgilang.</p>
+                        </div>
+                        <button @click="openModal('attendance')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Davomat belgilash
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-4">Sana</th>
+                                        <th class="p-4">O‘quvchi</th>
+                                        <th class="p-4">Sinf</th>
+                                        <th class="p-4">Holat</th>
+                                        <th class="p-4">Izoh</th>
+                                        <th class="p-4 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="a in attendance" :key="a.id">
+                                        <tr class="hover:bg-slate-50/80 transition">
+                                            <td class="p-4 font-medium text-slate-600 text-xs" x-text="a.day"></td>
+                                            <td class="p-4 font-bold text-[#182235]" x-text="getStudentName(a.studentId)"></td>
+                                            <td class="p-4 text-slate-600" x-text="getStudentClass(a.studentId)"></td>
+                                            <td class="p-4">
+                                                <span class="px-3 py-1 rounded-full text-xs font-bold"
+                                                      :class="{
+                                                          'bg-emerald-50 text-emerald-600': a.status === 'Keldi',
+                                                          'bg-rose-50 text-rose-600': a.status === 'Kelmagan',
+                                                          'bg-amber-50 text-amber-600': a.status === 'Sababli',
+                                                          'bg-purple-50 text-purple-600': a.status === 'Kechikdi'
+                                                      }" x-text="a.status"></span>
+                                            </td>
+                                            <td class="p-4 text-slate-500 text-xs" x-text="a.note || '—'"></td>
+                                            <td class="p-4 text-right">
+                                                <button @click="deleteItem('attendance', a.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="attendance.length === 0">
+                                        <tr><td colspan="6" class="p-8 text-center text-slate-400 text-sm">Davomat ma'lumotlari mavjud emas.</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. DAFTARI YO'QLAR -->
+                <div x-show="currentTab === 'notebooks'" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#182235]">Daftari yo‘qlar</h3>
+                            <p class="text-sm text-slate-500">Daftar olib kelmagan o‘quvchilarni fan va sana bilan qayd eting.</p>
+                        </div>
+                        <button @click="openModal('notebook')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Qayd qo‘shish
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-4">Sana</th>
+                                        <th class="p-4">O‘quvchi</th>
+                                        <th class="p-4">Sinf</th>
+                                        <th class="p-4">Fan</th>
+                                        <th class="p-4">Izoh</th>
+                                        <th class="p-4 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="n in notebooks" :key="n.id">
+                                        <tr class="hover:bg-slate-50/80 transition">
+                                            <td class="p-4 font-medium text-slate-600 text-xs" x-text="n.day"></td>
+                                            <td class="p-4 font-bold text-[#182235]" x-text="getStudentName(n.studentId)"></td>
+                                            <td class="p-4 text-slate-600" x-text="getStudentClass(n.studentId)"></td>
+                                            <td class="p-4 font-semibold text-[#4169E1]" x-text="n.subject"></td>
+                                            <td class="p-4 text-slate-500 text-xs" x-text="n.note || '—'"></td>
+                                            <td class="p-4 text-right">
+                                                <button @click="deleteItem('notebooks', n.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="notebooks.length === 0">
+                                        <tr><td colspan="6" class="p-8 text-center text-slate-400 text-sm">Ma'lumotlar mavjud emas.</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. KECH QOLGANLAR -->
+                <div x-show="currentTab === 'lateness'" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#182235]">Darsga kech qolganlar</h3>
+                            <p class="text-sm text-slate-500">Kechikkan vaqt va sababini qayd qilib boring.</p>
+                        </div>
+                        <button @click="openModal('lateness')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Kechikish qo‘shish
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-4">Sana</th>
+                                        <th class="p-4">O‘quvchi</th>
+                                        <th class="p-4">Sinf</th>
+                                        <th class="p-4">Daqiqa</th>
+                                        <th class="p-4">Sabab</th>
+                                        <th class="p-4 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="l in lateness" :key="l.id">
+                                        <tr class="hover:bg-slate-50/80 transition">
+                                            <td class="p-4 font-medium text-slate-600 text-xs" x-text="l.day"></td>
+                                            <td class="p-4 font-bold text-[#182235]" x-text="getStudentName(l.studentId)"></td>
+                                            <td class="p-4 text-slate-600" x-text="getStudentClass(l.studentId)"></td>
+                                            <td class="p-4 font-bold text-amber-600" x-text="l.minutes + ' min'"></td>
+                                            <td class="p-4 text-slate-500 text-xs" x-text="l.reason || '—'"></td>
+                                            <td class="p-4 text-right">
+                                                <button @click="deleteItem('lateness', l.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="lateness.length === 0">
+                                        <tr><td colspan="6" class="p-8 text-center text-slate-400 text-sm">Ma'lumotlar mavjud emas.</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. TARTIB NAZORATI -->
+                <div x-show="currentTab === 'discipline'" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#182235]">Tartib nazorati</h3>
+                            <p class="text-sm text-slate-500">Intizom bilan bog‘liq holatlarni xolis va aniq qayd eting.</p>
+                        </div>
+                        <button @click="openModal('discipline')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Intizomiy qayd
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-4">Sana</th>
+                                        <th class="p-4">O‘quvchi</th>
+                                        <th class="p-4">Sinf</th>
+                                        <th class="p-4">Holat</th>
+                                        <th class="p-4">Ko‘rilgan chora</th>
+                                        <th class="p-4 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="d in discipline" :key="d.id">
+                                        <tr class="hover:bg-slate-50/80 transition">
+                                            <td class="p-4 font-medium text-slate-600 text-xs" x-text="d.day"></td>
+                                            <td class="p-4 font-bold text-[#182235]" x-text="getStudentName(d.studentId)"></td>
+                                            <td class="p-4 text-slate-600" x-text="getStudentClass(d.studentId)"></td>
+                                            <td class="p-4 text-slate-700 text-xs" x-text="d.details"></td>
+                                            <td class="p-4 text-slate-500 text-xs" x-text="d.actionTaken || '—'"></td>
+                                            <td class="p-4 text-right">
+                                                <button @click="deleteItem('discipline', d.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="discipline.length === 0">
+                                        <tr><td colspan="6" class="p-8 text-center text-slate-400 text-sm">Ma'lumotlar mavjud emas.</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. MAVZULAR -->
+                <div x-show="currentTab === 'lessons'" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#182235]">Dars mavzulari</h3>
+                            <p class="text-sm text-slate-500">O‘tilgan dars mavzularini fan, sinf va sana bo‘yicha saqlang.</p>
+                        </div>
+                        <button @click="openModal('lesson')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Mavzu qo‘shish
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-4">Sana</th>
+                                        <th class="p-4">Sinf</th>
+                                        <th class="p-4">Fan</th>
+                                        <th class="p-4">Mavzu</th>
+                                        <th class="p-4">O‘qituvchi</th>
+                                        <th class="p-4 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="ls in lessons" :key="ls.id">
+                                        <tr class="hover:bg-slate-50/80 transition">
+                                            <td class="p-4 font-medium text-slate-600 text-xs" x-text="ls.day"></td>
+                                            <td class="p-4 font-bold text-[#182235]" x-text="ls.className"></td>
+                                            <td class="p-4 font-semibold text-[#4169E1]" x-text="ls.subject"></td>
+                                            <td class="p-4 text-slate-700 text-xs font-semibold" x-text="ls.topic"></td>
+                                            <td class="p-4 text-slate-500 text-xs" x-text="ls.teacher"></td>
+                                            <td class="p-4 text-right">
+                                                <button @click="deleteItem('lessons', ls.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="lessons.length === 0">
+                                        <tr><td colspan="6" class="p-8 text-center text-slate-400 text-sm">Mavzular kiritilmagan.</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 8. BAHOLAR -->
+                <div x-show="currentTab === 'grades'" class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#182235]">Baholar</h3>
+                            <p class="text-sm text-slate-500">O‘quvchilarning baholarini kiriting va o‘rtacha natijalarni kuzating.</p>
+                        </div>
+                        <button @click="openModal('grade')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Baho qo‘yish
+                        </button>
+                    </div>
+
+                    <!-- Average Score Card -->
+                    <div class="bg-white p-5 rounded-2xl border border-[#E1E7F0] flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-[#4169E1] font-bold text-xl"><i class="fa-solid fa-star"></i></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-semibold uppercase">O‘rtacha ko‘rsatkich</p>
+                                <h4 class="text-xl font-bold text-[#182235]" x-text="averageGradeText"></h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                        <th class="p-4">Sana</th>
+                                        <th class="p-4">O‘quvchi</th>
+                                        <th class="p-4">Sinf</th>
+                                        <th class="p-4">Fan</th>
+                                        <th class="p-4">Baho</th>
+                                        <th class="p-4">Izoh</th>
+                                        <th class="p-4 text-right">Amallar</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="g in grades" :key="g.id">
+                                        <tr class="hover:bg-slate-50/80 transition">
+                                            <td class="p-4 font-medium text-slate-600 text-xs" x-text="g.day"></td>
+                                            <td class="p-4 font-bold text-[#182235]" x-text="getStudentName(g.studentId)"></td>
+                                            <td class="p-4 text-slate-600" x-text="getStudentClass(g.studentId)"></td>
+                                            <td class="p-4 font-semibold text-[#4169E1]" x-text="g.subject"></td>
+                                            <td class="p-4">
+                                                <span class="w-8 h-8 rounded-lg bg-[#E8F8F2] text-[#20A477] font-bold flex items-center justify-center text-xs" x-text="g.grade"></span>
+                                            </td>
+                                            <td class="p-4 text-slate-500 text-xs" x-text="g.comment || '—'"></td>
+                                            <td class="p-4 text-right">
+                                                <button @click="deleteItem('grades', g.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="grades.length === 0">
+                                        <tr><td colspan="7" class="p-8 text-center text-slate-400 text-sm">Baholar kiritilmagan.</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 9. FOYDALANUVCHILAR (Admin only) -->
+                <div x-show="currentTab === 'users'" class="space-y-6">
+                    <template x-if="currentUser?.role === 'admin'">
+                        <div class="space-y-6">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <h3 class="text-2xl font-bold text-[#182235]">Foydalanuvchilar</h3>
+                                    <p class="text-sm text-slate-500">Tizimga kiradigan o‘qituvchi va administrator hisoblarini boshqaring.</p>
+                                </div>
+                                <button @click="openModal('user')" class="px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0d9488] text-white text-sm font-bold rounded-xl shadow-md transition flex items-center gap-2">
+                                    <i class="fa-solid fa-plus text-xs"></i> Foydalanuvchi qo‘shish
+                                </button>
+                            </div>
+
+                            <div class="bg-white rounded-2xl border border-[#E1E7F0] shadow-sm overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-sm">
+                                        <thead>
+                                            <tr class="bg-[#EAF0F8] text-[#182235] text-xs font-bold uppercase tracking-wider">
+                                                <th class="p-4">ID</th>
+                                                <th class="p-4">Login</th>
+                                                <th class="p-4">F.I.SH.</th>
+                                                <th class="p-4">Rol</th>
+                                                <th class="p-4 text-right">Amallar</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100">
+                                            <template x-for="u in users" :key="u.id">
+                                                <tr class="hover:bg-slate-50/80 transition">
+                                                    <td class="p-4 font-bold text-slate-400 text-xs" x-text="u.id"></td>
+                                                    <td class="p-4 font-bold text-[#182235]" x-text="u.username"></td>
+                                                    <td class="p-4 text-slate-700 font-medium" x-text="u.fullName"></td>
+                                                    <td class="p-4">
+                                                        <span class="px-2.5 py-1 rounded-lg text-xs font-bold" :class="u.role === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'" x-text="u.role"></span>
+                                                    </td>
+                                                    <td class="p-4 text-right">
+                                                        <template x-if="u.username !== 'admin'">
+                                                            <button @click="deleteItem('users', u.id)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                                                        </template>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Dialog Window -->
+    <template x-if="activeModal">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+            <div class="bg-white w-full max-w-lg p-6 rounded-2xl shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                    <h3 class="text-lg font-bold text-[#182235]" x-text="modalTitle"></h3>
+                    <button @click="activeModal = null" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- Dynamic Form Inputs -->
+                <div class="space-y-4">
+                    
+                    <!-- Student Form -->
+                    <template x-if="activeModal === 'student'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">O‘quvchining F.I.SH.</label>
+                                <input type="text" x-model="modalData.fullName" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sinf (masalan, 7-A)</label>
+                                <input type="text" x-model="modalData.className" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Guruh (masalan, 1-guruh)</label>
+                                <input type="text" x-model="modalData.groupName" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Telefon (ixtiyoriy)</label>
+                                <input type="text" x-model="modalData.phone" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Attendance Form -->
+                    <template x-if="activeModal === 'attendance'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">O‘quvchi</label>
+                                <select x-model="modalData.studentId" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="">O‘quvchini tanlang</option>
+                                    <template x-for="s in students" :key="s.id">
+                                        <option :value="s.id" x-text="s.fullName + ' (' + s.className + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Davomat holati</label>
+                                <select x-model="modalData.status" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="Keldi">Keldi</option>
+                                    <option value="Kelmagan">Kelmagan</option>
+                                    <option value="Sababli">Sababli</option>
+                                    <option value="Kechikdi">Kechikdi</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sana (YYYY-MM-DD)</label>
+                                <input type="date" x-model="modalData.day" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Izoh (ixtiyoriy)</label>
+                                <input type="text" x-model="modalData.note" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Notebook Form -->
+                    <template x-if="activeModal === 'notebook'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">O‘quvchi</label>
+                                <select x-model="modalData.studentId" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="">O‘quvchini tanlang</option>
+                                    <template x-for="s in students" :key="s.id">
+                                        <option :value="s.id" x-text="s.fullName + ' (' + s.className + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Fan</label>
+                                <input type="text" x-model="modalData.subject" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sana</label>
+                                <input type="date" x-model="modalData.day" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Izoh</label>
+                                <input type="text" x-model="modalData.note" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Lateness Form -->
+                    <template x-if="activeModal === 'lateness'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">O‘quvchi</label>
+                                <select x-model="modalData.studentId" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="">O‘quvchini tanlang</option>
+                                    <template x-for="s in students" :key="s.id">
+                                        <option :value="s.id" x-text="s.fullName + ' (' + s.className + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Necha daqiqa kechikdi?</label>
+                                <input type="number" x-model="modalData.minutes" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sana</label>
+                                <input type="date" x-model="modalData.day" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sabab</label>
+                                <input type="text" x-model="modalData.reason" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Discipline Form -->
+                    <template x-if="activeModal === 'discipline'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">O‘quvchi</label>
+                                <select x-model="modalData.studentId" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="">O‘quvchini tanlang</option>
+                                    <template x-for="s in students" :key="s.id">
+                                        <option :value="s.id" x-text="s.fullName + ' (' + s.className + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sana</label>
+                                <input type="date" x-model="modalData.day" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Holat tavsifi</label>
+                                <textarea x-model="modalData.details" rows="3" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Ko‘rilgan chora</label>
+                                <textarea x-model="modalData.actionTaken" rows="2" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600"></textarea>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Lesson Form -->
+                    <template x-if="activeModal === 'lesson'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sinf</label>
+                                <input type="text" x-model="modalData.className" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Fan</label>
+                                <input type="text" x-model="modalData.subject" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Dars mavzusi</label>
+                                <input type="text" x-model="modalData.topic" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sana</label>
+                                <input type="date" x-model="modalData.day" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Grade Form -->
+                    <template x-if="activeModal === 'grade'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">O‘quvchi</label>
+                                <select x-model="modalData.studentId" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="">O‘quvchini tanlang</option>
+                                    <template x-for="s in students" :key="s.id">
+                                        <option :value="s.id" x-text="s.fullName + ' (' + s.className + ')'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Fan</label>
+                                <input type="text" x-model="modalData.subject" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Baho (1 - 5)</label>
+                                <select x-model="modalData.grade" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="5">5</option>
+                                    <option value="4">4</option>
+                                    <option value="3">3</option>
+                                    <option value="2">2</option>
+                                    <option value="1">1</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sana</label>
+                                <input type="date" x-model="modalData.day" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Izoh (ixtiyoriy)</label>
+                                <input type="text" x-model="modalData.comment" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- User Form -->
+                    <template x-if="activeModal === 'user'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Login (username)</label>
+                                <input type="text" x-model="modalData.username" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">F.I.SH.</label>
+                                <input type="text" x-model="modalData.fullName" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Parol</label>
+                                <input type="password" x-model="modalData.password" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Rol</label>
+                                <select x-model="modalData.role" class="w-full px-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-indigo-600 bg-white">
+                                    <option value="teacher">O‘qituvchi (teacher)</option>
+                                    <option value="admin">Administrator (admin)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </template>
+
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button @click="activeModal = null" class="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-bold transition">Bekor qilish</button>
+                    <button @click="saveModalData()" class="px-5 py-2 bg-[#14B8A6] hover:bg-[#0d9488] text-white rounded-lg text-sm font-bold shadow-md transition">Saqlash</button>
+                </div>
+
+            </div>
+        </div>
+    </template>
+
+    <script>
+        function schoolApp() {
+            return {
+                isAuthenticated: false,
+                currentUser: null,
+                loginForm: { username: 'admin', password: 'admin123' },
+                currentTab: 'dashboard',
+                selectedClass: '7-A',
+                selectedGroup: '1-guruh',
+                classOptions: ['5-A', '6-A', '7-A', '7-B', '8-A', '9-A', '10-A', '11-A'],
+                searchStudent: '',
+                activeModal: null,
+                modalData: {},
+                currentDate: new Date().toLocaleDateString('uz-UZ'),
+
+                // Database tables stored in localStorage
+                users: [],
+                students: [],
+                attendance: [],
+                notebooks: [],
+                lateness: [],
+                discipline: [],
+                lessons: [],
+                grades: [],
+
+                init() {
+                    this.loadData();
+                },
+
+                loadData() {
+                    // Default Users
+                    const savedUsers = localStorage.getItem('sj_users');
+                    if (savedUsers) {
+                        this.users = JSON.parse(savedUsers);
+                    } else {
+                        this.users = [
+                            { id: 1, username: 'admin', password: 'admin123', role: 'admin', fullName: 'Bosh administrator' },
+                            { id: 2, username: 'teacher', password: 'teacher123', role: 'teacher', fullName: 'O‘qituvchi' }
+                        ];
+                        this.saveToStorage('sj_users', this.users);
+                    }
+
+                    // Default Students
+                    const savedStudents = localStorage.getItem('sj_students');
+                    if (savedStudents) {
+                        this.students = JSON.parse(savedStudents);
+                    } else {
+                        this.students = [
+                            { id: 1, fullName: 'Alisher Navoiy', className: '7-A', groupName: '1-guruh', phone: '+998901234567' },
+                            { id: 2, fullName: 'Zahiriddin Bobur', className: '7-A', groupName: '1-guruh', phone: '+998907654321' },
+                            { id: 3, fullName: 'Amir Temur', className: '7-A', groupName: '2-guruh', phone: '+998935554433' }
+                        ];
+                        this.saveToStorage('sj_students', this.students);
+                    }
+
+                    ['attendance', 'notebooks', 'lateness', 'discipline', 'lessons', 'grades'].forEach(table => {
+                        const val = localStorage.getItem('sj_' + table);
+                        this[table] = val ? JSON.parse(val) : [];
+                    });
+                },
+
+                saveToStorage(key, data) {
+                    localStorage.setItem(key, JSON.stringify(data));
+                },
+
+                handleLogin() {
+                    const found = this.users.find(u => u.username === this.loginForm.username && u.password === this.loginForm.password);
+                    if (!found) {
+                        alert("Foydalanuvchi nomi yoki parol noto‘g‘ri!");
+                        return;
+                    }
+                    this.currentUser = found;
+                    this.isAuthenticated = true;
+                },
+
+                logout() {
+                    this.isAuthenticated = false;
+                    this.currentUser = null;
+                },
+
+                get availableTabs() {
+                    let tabs = [
+                        { id: 'dashboard', name: 'Bosh sahifa', icon: '<i class="fa-solid fa-house"></i>' },
+                        { id: 'students', name: 'O‘quvchilar', icon: '<i class="fa-solid fa-user-graduate"></i>' },
+                        { id: 'attendance', name: 'Davomat', icon: '<i class="fa-solid fa-check"></i>' },
+                        { id: 'notebooks', name: 'Daftari yo‘qlar', icon: '<i class="fa-solid fa-book"></i>' },
+                        { id: 'lateness', name: 'Kech qolganlar', icon: '<i class="fa-solid fa-clock"></i>' },
+                        { id: 'discipline', name: 'Tartib nazorati', icon: '<i class="fa-solid fa-flag"></i>' },
+                        { id: 'lessons', name: 'Mavzu', icon: '<i class="fa-solid fa-bookmark"></i>' },
+                        { id: 'grades', name: 'Baholar', icon: '<i class="fa-solid fa-star"></i>' }
+                    ];
+                    if (this.currentUser?.role === 'admin') {
+                        tabs.push({ id: 'users', name: 'Foydalanuvchilar', icon: '<i class="fa-solid fa-gear"></i>' });
+                    }
+                    return tabs;
+                },
+
+                get currentTabName() {
+                    const tab = this.availableTabs.find(t => t.id === this.currentTab);
+                    return tab ? tab.name : 'Bosh sahifa';
+                },
+
+                get filteredStudents() {
+                    if (!this.searchStudent) return this.students;
+                    const term = this.searchStudent.toLowerCase();
+                    return this.students.filter(s => s.fullName.toLowerCase().includes(term) || s.className.toLowerCase().includes(term));
+                },
+
+                get uniqueClassesCount() {
+                    return [...new Set(this.students.map(s => s.className))].length;
+                },
+
+                get todayPresentCount() {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    return this.attendance.filter(a => a.day === todayStr && a.status === 'Keldi').length;
+                },
+
+                get todayGradesCount() {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    return this.grades.filter(g => g.day === todayStr).length;
+                },
+
+                get averageGradeText() {
+                    if (this.grades.length === 0) return 'Hali baho kiritilmagan';
+                    const sum = this.grades.reduce((acc, cur) => acc + Number(cur.grade), 0);
+                    return (sum / this.grades.length).toFixed(2);
+                },
+
+                getStudentName(id) {
+                    const st = this.students.find(s => s.id === Number(id));
+                    return st ? st.fullName : 'Noma’lum';
+                },
+
+                getStudentClass(id) {
+                    const st = this.students.find(s => s.id === Number(id));
+                    return st ? st.className : '';
+                },
+
+                openModal(type) {
+                    this.activeModal = type;
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    this.modalData = { day: todayStr, grade: '5', minutes: 5, status: 'Keldi' };
+                    if(type === 'user') {
+                        this.modalData = { role: 'teacher' };
+                    }
+                },
+
+                get modalTitle() {
+                    const titles = {
+                        student: 'Yangi o‘quvchi qo‘shish',
+                        attendance: 'Davomat belgilash',
+                        notebook: 'Daftar olib kelmagan',
+                        lateness: 'Kechikishni qayd etish',
+                        discipline: 'Intizomiy qayd',
+                        lesson: 'Dars mavzusini qo‘shish',
+                        grade: 'Baho qo‘yish',
+                        user: 'Foydalanuvchi qo‘shish'
+                    };
+                    return titles[this.activeModal] || '';
+                },
+
+                saveModalData() {
+                    const type = this.activeModal;
+                    if (type === 'student') {
+                        if (!this.modalData.fullName || !this.modalData.className) {
+                            alert("Iltimos, ism va sinfni kiriting!");
+                            return;
+                        }
+                        const newItem = {
+                            id: Date.now(),
+                            fullName: this.modalData.fullName,
+                            className: this.modalData.className,
+                            groupName: this.modalData.groupName || '1-guruh',
+                            phone: this.modalData.phone || ''
+                        };
+                        this.students.push(newItem);
+                        this.saveToStorage('sj_students', this.students);
+                    } else if (type === 'user') {
+                        if (!this.modalData.username || !this.modalData.fullName || !this.modalData.password) {
+                            alert("Barcha maydonlarni to‘ldiring!");
+                            return;
+                        }
+                        const newItem = {
+                            id: Date.now(),
+                            username: this.modalData.username,
+                            fullName: this.modalData.fullName,
+                            password: this.modalData.password,
+                            role: this.modalData.role
+                        };
+                        this.users.push(newItem);
+                        this.saveToStorage('sj_users', this.users);
+                    } else {
+                        // General record mapping
+                        const tableMap = {
+                            attendance: 'attendance',
+                            notebook: 'notebooks',
+                            lateness: 'lateness',
+                            discipline: 'discipline',
+                            lesson: 'lessons',
+                            grade: 'grades'
+                        };
+                        const tableName = tableMap[type];
+                        if(tableName) {
+                            const newItem = { id: Date.now(), ...this.modalData };
+                            this[tableName].push(newItem);
+                            this.saveToStorage('sj_' + tableName, this[tableName]);
+                        }
+                    }
+                    this.activeModal = null;
+                },
+
+                deleteItem(table, id) {
+                    if (confirm("Haqiqatan ham ushbu yozuvni o‘chirmoqchimisiz?")) {
+                        this[table] = this[table].filter(item => item.id !== id);
+                        this.saveToStorage('sj_' + table, this[table]);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
